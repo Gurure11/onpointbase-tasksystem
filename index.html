@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_5OHH3dAUtETHgfDhSPSXpxPqHjqppSsRyKsmqkl1MJ1lGUCfszkndSb51R_r8SQ7Pg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzptctr1sl4BpziDp2MclYMFmdxCB-Y6e56IBbDbOjCXFLtlruA4jk2WYsPqnsLWjrmvg/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -318,9 +318,9 @@ function rowReview1(t){return `<tr><td><a class="ticket-link" onclick="openTicke
 function rowReview2(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${esc(t.TimeRemainingText)}</td><td><button class="btn primary" onclick="openTicket('${t.TicketID}')">Review</button></td></tr>`}
 function rowClosed(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${fmt(t.ClosedAt)}</td><td>${esc(t.ClosedTiming)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${score(t.Executive2Score)}</td><td>${finalScore(t.FinalScore)}</td></tr>`}
 function status(t){const cls=t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2'?'s-review':String(t.TimeRemainingText).includes('late')?'s-late':'s-open';return `<span class="status ${cls}">${esc(t.Status)}</span>`}
-function score(v){return (v===''||v==null)?'—':`${Math.round(Number(v))}%`}
-function finalScoreClass(v){const n=Number(v||0); if(n<50)return 'score-final-red'; if(n>=90)return 'score-final-black'; if(n>=75)return 'score-final-blue'; return 'score-final-green';}
-function finalScore(v){return (v===''||v==null)?'—':`<span class="${finalScoreClass(v)}">${Math.round(Number(v))}%</span>`}
+function score(v){const n=Number(v);return (v===''||v==null||isNaN(n))?'—':`${Math.round(n)}%`}
+function finalScoreClass(v){const n=Number(v); if(isNaN(n))return ''; if(n<50)return 'score-final-red'; if(n>=90)return 'score-final-black'; if(n>=75)return 'score-final-blue'; return 'score-final-green';}
+function finalScore(v){const n=Number(v);return (v===''||v==null||isNaN(n))?'—':`<span class="${finalScoreClass(n)}">${Math.round(n)}%</span>`}
 function linkListFromUploadAttachment(v){return String(v||'').split(/\s+/).filter(x=>/^https?:\/\//i.test(x)).map((url,i)=>`<div class="fileline"><a target="_blank" href="${esc(url)}">Ticket upload link ${i+1}</a></div>`).join('');}
 function fmt(v){return v?String(v).replace('T',' ').slice(0,16):'—'}
 function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
