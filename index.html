@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-BE1cqDi3GZaPd0NH2EewVLPw7ikD-IIK0OKYdGTFI8yRInJfYwU1DatJbez9YDvbFg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUOOlIIB4K6iHGLHnoa4DFLDr6oH3jxbBB6fv_Uy5zK6Iwq_nz9NRvq1QLH_TpkDidKw/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -298,7 +298,7 @@ function createTicket(){newErr.textContent='';newMsg.textContent='';const mode=d
 let DETAIL=null;
 function openTicket(id){api('getTicketDetail',{userId:USER.UserID,ticketId:id}).then(d=>{DETAIL=d;drawDrawer();drawer.classList.add('open');scrim.classList.add('open');}).catch(alertErr);}
 function closeDrawer(){drawer.classList.remove('open');scrim.classList.remove('open');}
-function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.outerHTML=`<span id="dStatus" class="status ${t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':'s-open'}">${esc(t.Status)}</span>`;dBody.innerHTML=`<h2>${esc(t.Title)}</h2><p class="muted">${esc(t.Description||'No description')}</p><div class="kv"><div><small>Created by</small><b>${esc(t.CreatedByName)}</b></div><div><small>Assigned to</small><b>${esc(t.AssignedToName)}</b></div><div><small>Assignee Email</small><b>${esc(t.AssignedToEmail||'')}</b></div><div><small>Assignee WhatsApp</small><b>${esc(t.AssignedToWhatsApp||'')}</b></div><div><small>Department</small><b>${esc(t.Department||'')}</b></div><div><small>Cost Center</small><b>${esc(t.CostCenter||'')}</b></div><div><small>Due Date</small><b>${fmt(t.DueDate)}</b></div><div><small>Submission Date</small><b>${fmt(t.SubmittedAt)}</b></div><div><small>Time lapse</small><b>${esc(t.TimeRemainingText)}</b></div><div><small>System Score</small><b>${score(t.SystemScore)}</b></div><div><small>Final Score</small><b>${score(t.FinalScore)}</b></div><div><small>Executive1</small><b>${score(t.Executive1Score)} ${esc(t.Executive1Name||'')}</b></div><div><small>Executive2</small><b>${score(t.Executive2Score)} ${esc(t.Executive2Name||'')}</b></div></div><div class="copybar"><button class="btn" onclick="copyTicketWhatsApp()">Copy Task to WhatsApp</button><button class="btn good" onclick="openTicketWhatsApp()">Open WhatsApp to Assignee</button></div><h3>Attachments</h3>${DETAIL.attachments.map(a=>`<div class="fileline"><a target="_blank" href="${a.DriveUrl}">${esc(a.FileName)}</a></div>`).join('')||'<p class="muted">No attachments.</p>'}<div class="f"><label>Upload Attachment / File</label><input type="file" id="fileUp"><button class="btn" onclick="uploadFile()">Upload File</button></div><h3>Comments</h3><div class="comments">${DETAIL.comments.map(c=>`<div class="comment"><div class="meta">${esc(c.UserName)} · ${esc(c.Role)} · ${fmt(c.CreatedAt)}</div>${esc(c.Comment)}</div>`).join('')||'<p class="muted">No comments.</p>'}</div><div class="f"><label>Add Comment</label><textarea id="commentTxt"></textarea><button class="btn" onclick="addComment()">Post Comment</button></div>`;drawActions(t);}
+function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.outerHTML=`<span id="dStatus" class="status ${t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':'s-open'}">${esc(t.Status)}</span>`;dBody.innerHTML=`<h2>${esc(t.Title)}</h2><p class="muted">${esc(t.Description||'No description')}</p><div class="kv"><div><small>Created by</small><b>${esc(t.CreatedByName)}</b></div><div><small>Assigned to</small><b>${esc(t.AssignedToName)}</b></div><div><small>Assignee Email</small><b>${esc(t.AssignedToEmail||'')}</b></div><div><small>Assignee WhatsApp</small><b>${esc(t.AssignedToWhatsApp||'')}</b></div><div><small>Department</small><b>${esc(t.Department||'')}</b></div><div><small>Cost Center</small><b>${esc(t.CostCenter||'')}</b></div><div><small>Due Date</small><b>${fmt(t.DueDate)}</b></div><div><small>Submission Date</small><b>${fmt(t.SubmittedAt)}</b></div><div><small>Time lapse</small><b>${esc(t.TimeRemainingText)}</b></div><div><small>System Score</small><b>${score(t.SystemScore)}</b></div><div><small>Final Score</small><b>${score(t.FinalScore)}</b></div><div><small>Executive1</small><b>${score(t.Executive1Score)} ${esc(t.Executive1Name||'')}</b></div><div><small>Executive2</small><b>${score(t.Executive2Score)} ${esc(t.Executive2Name||'')}</b></div></div><div class="copybar"><button class="btn" onclick="copyTicketWhatsApp()">Copy Task to WhatsApp</button><button class="btn good" onclick="openTicketWhatsApp()">Open WhatsApp to Assignee</button></div><h3>Attachments</h3>${DETAIL.attachments.map(a=>`<div class="fileline"><a target="_blank" href="${a.DriveUrl}">${esc(a.FileName)}</a></div>`).join('')||'<p class="muted">No attachments.</p>'}<div class="f"><label>Upload Attachment / File</label><input type="file" id="fileUp"><button class="btn" onclick="uploadFile()">Upload File</button></div><h3>Comments</h3><div class="comments">${DETAIL.comments.map(c=>`<div class="comment"><div class="meta">${esc(c.UserName)} · ${esc(c.Role)} · ${fmt(c.CreatedAt)}</div>${esc(c.Comment)}${c.DriveUrl?`<div class="fileline"><a target="_blank" href="${c.DriveUrl}">${esc(c.FileName||'View upload')}</a></div>`:''}</div>`).join('')||'<p class="muted">No comments.</p>'}</div><div class="f"><label>Add Comment</label><textarea id="commentTxt"></textarea><button class="btn" onclick="addComment()">Post Comment</button></div>`;drawActions(t);}
 function drawActions(t){let html='';if(t.CurrentBasket==='Assignee'&&(t.AssignedToUserID===USER.UserID||t.CreatedByUserID===USER.UserID||USER.Role==='Admin'))html+=`<button class="btn primary" onclick="submitTicket()">Submit Ticket to Executive1</button>`;if(t.CurrentBasket==='Executive1'&&(USER.Role==='Executive1'||USER.Role==='Admin'))html+=`<div class="scorebox"><label>Executive1 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Approval / return comment"><button class="btn primary" onclick="approve1()">Approve to Executive2</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;if(t.CurrentBasket==='Executive2'&&(USER.Role==='Executive2'||USER.Role==='Admin'))html+=`<div class="scorebox"><span class="pill">System Score: ${score(t.SystemScore)}</span><label>Executive2 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Closing / return comment"><button class="btn primary" onclick="approve2()">Approve & Close</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;dActions.innerHTML=html||'<span class="muted">No action available for your role on this ticket.</span>';const rd=document.getElementById('returnDue');if(rd){const d=new Date();d.setDate(d.getDate()+1);rd.value=d.toISOString().slice(0,10);}}
 function returnTicket(){const due=document.getElementById('returnDue')?.value; if(!due)return alert('Select a new due date before returning this ticket.');api('returnTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,newDueDate:due,comment:scoreComment?.value||commentTxt?.value||''}).then(()=>{alert('Ticket returned and re-opened with a new due date.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
 function addComment(){api('addComment',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt.value}).then(()=>openTicket(DETAIL.ticket.TicketID)).catch(alertErr)}
@@ -311,11 +311,11 @@ function readFileAsBase64(file){
     r.readAsDataURL(file);
   });
 }
-async function uploadFileChunked(file, ticketId){
+async function uploadFileChunked(file, ticketId, comment){
   const base64 = await readFileAsBase64(file);
   const chunkSize = 24000; // keep every JSONP URL safely below browser / Apps Script limits
   const totalChunks = Math.ceil(base64.length / chunkSize);
-  const init = await api('initAttachmentUpload',{userId:USER.UserID,ticketId,fileName:file.name,mimeType:file.type || 'application/octet-stream',totalChunks});
+  const init = await api('initAttachmentUpload',{userId:USER.UserID,ticketId,fileName:file.name,mimeType:file.type || 'application/octet-stream',totalChunks,comment:comment||''});
   for(let i=0;i<totalChunks;i++){
     const chunk = base64.slice(i*chunkSize,(i+1)*chunkSize);
     await api('uploadAttachmentChunk',{uploadId:init.uploadId,index:i,chunk});
@@ -327,7 +327,7 @@ function submitTicket(){
   const f=document.getElementById('fileUp')?.files?.[0];
   api('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''})
     .then(async ()=>{
-      if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID);
+      if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, '');
       alert('Ticket submitted to Executive1 successfully. Clock stopped and system score captured.');
       refresh();
       openTicket(DETAIL.ticket.TicketID);
@@ -339,7 +339,7 @@ function approve2(){api('executive2Approve',{userId:USER.UserID,ticketId:DETAIL.
 function uploadFile(){
   const f=fileUp.files[0];
   if(!f) return alert('Choose a file first.');
-  uploadFileChunked(f, DETAIL.ticket.TicketID)
+  uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'')
     .then(()=>openTicket(DETAIL.ticket.TicketID))
     .catch(alertErr);
 }
