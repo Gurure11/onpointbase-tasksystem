@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyySgk8J8Qhjgb8Be_LzeYBsfgluIW1unLk5ip6cqm36AnsHQLWtSCM34hCQnVBV553/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYMbHNHY-MRA1BCbNmjTKbCcey7hE4zPV6jm0fivm7bfRvyaxI-tmzySMnSbBU6cUE/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -317,20 +317,21 @@ function readFileAsBase64(file){
   });
 }
 async function uploadFileChunked(file, ticketId, comment){
-  const base64 = await readFileAsBase64(file);
-  // Small chunks prevent Apps Script JSONP URL failures on documents/images.
-  // Larger chunks often trigger browser/proxy URL-length errors before Apps Script receives them.
-  const chunkSize = 6000;
-  const totalChunks = Math.ceil(base64.length / chunkSize);
-  showSync('Starting upload: '+file.name+'...');
-  const init = await api('initAttachmentUpload',{userId:USER.UserID,ticketId,fileName:file.name,mimeType:file.type || 'application/octet-stream',totalChunks,comment:comment||''});
-  for(let i=0;i<totalChunks;i++){
-    const chunk = base64.slice(i*chunkSize,(i+1)*chunkSize);
-    showSync('Uploading '+file.name+' chunk '+(i+1)+' of '+totalChunks+'...');
-    await api('uploadAttachmentChunk',{uploadId:init.uploadId,index:i,chunk});
+  // Attachments now use POST instead of JSONP. This avoids URL-length failures
+  // and is the recommended method for images, PDFs, Word/Excel files and other documents.
+  const maxBytes = 18 * 1024 * 1024;
+  if(file.size > maxBytes){
+    throw new Error('File is too large. Please upload a file smaller than 18MB, or compress/split it.');
   }
-  showSync('Finishing upload and writing Drive links...');
-  return api('finishAttachmentUpload',{uploadId:init.uploadId,totalChunks});
+  const base64 = await readFileAsBase64(file);
+  return postApi('uploadAttachmentPost', {
+    userId: USER.UserID,
+    ticketId: ticketId,
+    fileName: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    base64: base64,
+    comment: comment || ''
+  });
 }
 
 function submitTicket(){
