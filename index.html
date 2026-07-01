@@ -17,9 +17,9 @@
     <div class="logo">OB</div><br>
     <h1>Onpoint-base Login</h1>
     <p>Connected to Google Sheet: <b>Onpoint-base</b></p>
-    <div class="f"><label>Username</label><input id="loginUser" placeholder="admin"></div>
-    <div class="f"><label>Password</label><input id="loginPass" type="password" placeholder="admin123"></div>
-    <button class="btn primary" onclick="login()">Login</button>
+    <div class="f"><label>Username / Email / UserID</label><input id="loginUser" placeholder="admin or your Users tab username"></div>
+    <div class="f"><label>Password</label><input id="loginPass" type="password" placeholder="PasswordHash value or admin123"></div>
+    <button class="btn primary" onclick="login()">Login</button><button class="btn" style="margin-left:8px" onclick="setupNow()">Repair / Setup Sheets</button>
     <div id="loginErr" class="err"></div>
   </div>
 </div>
@@ -104,6 +104,7 @@ function api(action, data={}){
 
 function initDates(){const d=new Date(); const iso=d.toISOString().slice(0,10); ['ntIssue','ntDue','rtStart'].forEach(id=>{const el=document.getElementById(id); if(el) el.value=iso;});}
 function login(){document.getElementById('loginErr').textContent='';api('login',{username:loginUser.value,password:loginPass.value}).then(u=>{USER=u;localStorage.setItem('ob_user',JSON.stringify(u));start();}).catch(e=>loginErr.textContent=e.message);}
+function setupNow(){document.getElementById('loginErr').textContent='Repairing sheets...';api('setup',{}).then(()=>{loginErr.textContent='Sheets repaired. Try login again. If Users tab was empty use admin / admin123.';}).catch(e=>loginErr.textContent=e.message);}
 function logout(){localStorage.removeItem('ob_user');location.reload();}
 function start(){document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');userPill.textContent=USER.Name+' · '+USER.Role;initDates();refresh();}
 function refresh(){api('bootstrap',{userId:USER.UserID}).then(data=>{STATE=data;fillLists();render();}).catch(alertErr);}
