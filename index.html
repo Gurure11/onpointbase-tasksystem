@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAaepxM2jbsrl_GbpIfN4uKwADVG2azGlBO4KH-NEQsqIfxzdt5_QaTkCvhL5cgwmP/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyySgk8J8Qhjgb8Be_LzeYBsfgluIW1unLk5ip6cqm36AnsHQLWtSCM34hCQnVBV553/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -139,9 +139,11 @@ function api(action, data={}){
   const cb = 'cb_' + Math.random().toString(36).slice(2);
   return new Promise((resolve,reject)=>{
     const s=document.createElement('script');
-    const done=()=>{hideSync();markSynced();};
-    window[cb]=(res)=>{delete window[cb];s.remove();done();res.ok?resolve(res.data):reject(new Error(res.error||'Request failed'));};
-    s.onerror=()=>{delete window[cb];s.remove();done();reject(new Error('Apps Script JSONP connection failed. Check deployment permissions and SCRIPT_URL.'));};
+    let finished=false;
+    const cleanup=()=>{try{delete window[cb];}catch(e){} try{s.remove();}catch(e){} hideSync(); markSynced();};
+    const timer=setTimeout(()=>{if(finished)return; finished=true; cleanup(); reject(new Error('Apps Script JSONP connection timed out. For uploads, use smaller files or redeploy the latest Apps Script as Web App: Execute as Me, Anyone with the link.'));}, 60000);
+    window[cb]=(res)=>{if(finished)return; finished=true; clearTimeout(timer); cleanup(); res && res.ok ? resolve(res.data) : reject(new Error((res && res.error) || 'Request failed'));};
+    s.onerror=()=>{if(finished)return; finished=true; clearTimeout(timer); cleanup(); reject(new Error('Apps Script JSONP connection failed. Check deployment permissions, SCRIPT_URL, and file chunk size.'));};
     s.src = SCRIPT_URL + '?callback=' + cb + '&payload=' + payload;
     document.body.appendChild(s);
   });
@@ -290,7 +292,7 @@ function rowReview2(t){return `<tr><td><a class="ticket-link" onclick="openTicke
 function rowClosed(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${fmt(t.ClosedAt)}</td><td>${esc(t.ClosedTiming)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${score(t.Executive2Score)}</td><td>${finalScore(t.FinalScore)}</td></tr>`}
 function status(t){const cls=t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':String(t.TimeRemainingText).includes('late')?'s-late':'s-open';return `<span class="status ${cls}">${esc(t.Status)}</span>`}
 function score(v){return (v===''||v==null)?'—':`${Math.round(Number(v))}%`}
-function finalScoreClass(v){const n=Number(v||0); if(n<50)return 'score-final-red'; if(n>90)return 'score-final-black'; if(n>75)return 'score-final-blue'; return 'score-final-green';}
+function finalScoreClass(v){const n=Number(v||0); if(n<50)return 'score-final-red'; if(n>=90)return 'score-final-black'; if(n>=75)return 'score-final-blue'; return 'score-final-green';}
 function finalScore(v){return (v===''||v==null)?'—':`<span class="${finalScoreClass(v)}">${Math.round(Number(v))}%</span>`}
 function linkListFromUploadAttachment(v){return String(v||'').split(/\s+/).filter(x=>/^https?:\/\//i.test(x)).map((url,i)=>`<div class="fileline"><a target="_blank" href="${esc(url)}">Ticket upload link ${i+1}</a></div>`).join('');}
 function fmt(v){return v?String(v).replace('T',' ').slice(0,16):'—'}
@@ -316,13 +318,18 @@ function readFileAsBase64(file){
 }
 async function uploadFileChunked(file, ticketId, comment){
   const base64 = await readFileAsBase64(file);
-  const chunkSize = 24000; // keep every JSONP URL safely below browser / Apps Script limits
+  // Small chunks prevent Apps Script JSONP URL failures on documents/images.
+  // Larger chunks often trigger browser/proxy URL-length errors before Apps Script receives them.
+  const chunkSize = 6000;
   const totalChunks = Math.ceil(base64.length / chunkSize);
+  showSync('Starting upload: '+file.name+'...');
   const init = await api('initAttachmentUpload',{userId:USER.UserID,ticketId,fileName:file.name,mimeType:file.type || 'application/octet-stream',totalChunks,comment:comment||''});
   for(let i=0;i<totalChunks;i++){
     const chunk = base64.slice(i*chunkSize,(i+1)*chunkSize);
+    showSync('Uploading '+file.name+' chunk '+(i+1)+' of '+totalChunks+'...');
     await api('uploadAttachmentChunk',{uploadId:init.uploadId,index:i,chunk});
   }
+  showSync('Finishing upload and writing Drive links...');
   return api('finishAttachmentUpload',{uploadId:init.uploadId,totalChunks});
 }
 
