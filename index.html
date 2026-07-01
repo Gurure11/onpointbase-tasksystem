@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnLWAk7zZA7z5VfVQLG1yvY3WqQp0fwoRt_5sWahkDYxuZlGOpodPCr4UqXgrB2EC6IQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby12YvhYFjC2-NN2rUE-iWybW-6LlYmdiBtx7VCnn8aPlBUxuBx2WQEj1yhVzJvmdwkXQ/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -262,18 +262,47 @@ function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.
 function drawActions(t){let html='';if(t.CurrentBasket==='Assignee'&&(t.AssignedToUserID===USER.UserID||t.CreatedByUserID===USER.UserID||USER.Role==='Admin'))html+=`<button class="btn primary" onclick="submitTicket()">Submit Ticket to Executive1</button>`;if(t.CurrentBasket==='Executive1'&&(USER.Role==='Executive1'||USER.Role==='Admin'))html+=`<div class="scorebox"><label>Executive1 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Approval / return comment"><button class="btn primary" onclick="approve1()">Approve to Executive2</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;if(t.CurrentBasket==='Executive2'&&(USER.Role==='Executive2'||USER.Role==='Admin'))html+=`<div class="scorebox"><span class="pill">System Score: ${score(t.SystemScore)}</span><label>Executive2 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Closing / return comment"><button class="btn primary" onclick="approve2()">Approve & Close</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;dActions.innerHTML=html||'<span class="muted">No action available for your role on this ticket.</span>';const rd=document.getElementById('returnDue');if(rd){const d=new Date();d.setDate(d.getDate()+1);rd.value=d.toISOString().slice(0,10);}}
 function returnTicket(){const due=document.getElementById('returnDue')?.value; if(!due)return alert('Select a new due date before returning this ticket.');api('returnTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,newDueDate:due,comment:scoreComment?.value||commentTxt?.value||''}).then(()=>{alert('Ticket returned and re-opened with a new due date.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
 function addComment(){api('addComment',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt.value}).then(()=>openTicket(DETAIL.ticket.TicketID)).catch(alertErr)}
+
+function readFileAsBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(String(r.result).split(',')[1]||'');
+    r.onerror=()=>reject(new Error('Could not read the selected attachment.'));
+    r.readAsDataURL(file);
+  });
+}
+async function uploadFileChunked(file, ticketId){
+  const base64 = await readFileAsBase64(file);
+  const chunkSize = 24000; // keep every JSONP URL safely below browser / Apps Script limits
+  const totalChunks = Math.ceil(base64.length / chunkSize);
+  const init = await api('initAttachmentUpload',{userId:USER.UserID,ticketId,fileName:file.name,mimeType:file.type || 'application/octet-stream',totalChunks});
+  for(let i=0;i<totalChunks;i++){
+    const chunk = base64.slice(i*chunkSize,(i+1)*chunkSize);
+    await api('uploadAttachmentChunk',{uploadId:init.uploadId,index:i,chunk});
+  }
+  return api('finishAttachmentUpload',{uploadId:init.uploadId,totalChunks});
+}
+
 function submitTicket(){
   const f=document.getElementById('fileUp')?.files?.[0];
-  const finish=(extra={})=>api('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||'',...extra}).then(()=>{alert('Ticket submitted to Executive1 successfully. Clock stopped and system score captured.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr);
-  if(!f) return finish();
-  const r=new FileReader();
-  r.onload=()=>finish({fileName:f.name,mimeType:f.type,base64:String(r.result).split(',')[1]});
-  r.onerror=()=>alert('Could not read the selected attachment.');
-  r.readAsDataURL(f);
+  api('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''})
+    .then(async ()=>{
+      if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID);
+      alert('Ticket submitted to Executive1 successfully. Clock stopped and system score captured.');
+      refresh();
+      openTicket(DETAIL.ticket.TicketID);
+    })
+    .catch(alertErr);
 }
 function approve1(){api('executive1Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive1 approval successful. Ticket moved to Executive2.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
 function approve2(){api('executive2Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive2 approval successful. Ticket is permanently closed.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
-function uploadFile(){const f=fileUp.files[0]; if(!f) return alert('Choose a file first.'); const r=new FileReader(); r.onload=()=>{const base64=String(r.result).split(',')[1];api('uploadAttachment',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,fileName:f.name,mimeType:f.type,base64}).then(()=>openTicket(DETAIL.ticket.TicketID)).catch(alertErr)}; r.readAsDataURL(f);}
+function uploadFile(){
+  const f=fileUp.files[0];
+  if(!f) return alert('Choose a file first.');
+  uploadFileChunked(f, DETAIL.ticket.TicketID)
+    .then(()=>openTicket(DETAIL.ticket.TicketID))
+    .catch(alertErr);
+}
 
 if(USER) start();
 </script>
