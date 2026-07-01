@@ -59,15 +59,16 @@
     <div class="grid cards">
       <div class="card stat clickable critical" onclick="openTicketWindow('critical')"><div class="l">Critical Tickets</div><div id="stCritical" class="v">0</div></div>
       <div class="card stat clickable ontime" onclick="openTicketWindow('openOnTime')"><div class="l">Open &amp; Ontime</div><div id="stOpenOnTime" class="v">0</div></div>
-      <div class="card stat clickable review" onclick="openTicketWindow('review1')"><div class="l">Review Basket Executive1</div><div id="stE1" class="v">0</div></div>
-      <div class="card stat clickable review" onclick="openTicketWindow('review2')"><div class="l">Review Basket Executive2</div><div id="stE2" class="v">0</div></div>
+      <div class="card stat clickable review reviewOnly" onclick="openTicketWindow('review1')"><div class="l">Review Basket Executive1</div><div id="stE1" class="v">0</div></div>
+      <div class="card stat clickable review reviewOnly" onclick="openTicketWindow('review2')"><div class="l">Review Basket Executive2</div><div id="stE2" class="v">0</div></div>
       <div class="card stat clickable late" onclick="openTicketWindow('openLate')"><div class="l">Open and Late Tickets</div><div id="stLate" class="v">0</div></div>
       <div class="card stat clickable" onclick="openTicketWindow('closed')"><div class="l">Closed Tickets</div><div id="stClosed" class="v">0</div></div>
     </div>
     <div class="tabs" id="tabs">
+      <button class="tab tab-cta" data-tab="new" onclick="showTab('new')">+ Create ticket</button>
       <button class="tab active on" data-tab="dashboard" onclick="showTab('dashboard')">Executive</button>
-      <button class="tab" data-tab="review1" onclick="showTab('review1')">Review</button>
-      <button class="tab" data-tab="review2" onclick="showTab('review2')">Approvals</button>
+      <button class="tab reviewOnly" data-tab="review1" onclick="showTab('review1')">Review</button>
+      <button class="tab reviewOnly" data-tab="review2" onclick="showTab('review2')">Approvals</button>
       <button class="tab" data-tab="task" onclick="showTab('task')">My tickets</button>
       <button class="tab" data-tab="task" onclick="showTab('task')">Critical</button>
       <button class="tab" data-tab="task" onclick="showTab('task')">Assigned</button>
@@ -77,7 +78,6 @@
       <button class="tab" data-tab="performance" onclick="showTab('performance')">Performance</button>
       <button class="tab" data-tab="dashboard" onclick="showTab('dashboard')">Explore</button>
       <button class="tab" data-tab="dashboard" onclick="showTab('dashboard')">Activity</button>
-      <button class="tab tab-cta" data-tab="new" onclick="showTab('new')">+ Create ticket</button>
     </div>
   </div>
 
@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVxNRJiYgCFpTnyBl6NBEoyH9b4RwAqvNvgH2vEz1Xm3ahMse-t8497bMeD8zHVtiA2w/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-BE1cqDi3GZaPd0NH2EewVLPw7ikD-IIK0OKYdGTFI8yRInJfYwU1DatJbez9YDvbFg/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -150,10 +150,10 @@ function initDates(){const d=new Date(); const iso=d.toISOString().slice(0,10); 
 function login(){document.getElementById('loginErr').textContent='Synchronising login...';api('login',{username:loginUser.value.trim(),password:loginPass.value.trim()}).then(u=>{USER=u;localStorage.setItem('ob_user',JSON.stringify(u));start();alert('Login successful.');}).catch(e=>loginErr.textContent=e.message);}
 function setupNow(){document.getElementById('loginErr').textContent='Repairing sheets...';api('setup',{}).then(()=>{loginErr.textContent='Sheets repaired. Try login again. Your Users tab headings now match: UserID, Name, Email, Phone, WhatsApp, Username, Password, Role, Department, IsActive, CreatedAt, LastLogin, Cost Center. Try login again. If Users tab was empty use admin / admin123.';}).catch(e=>loginErr.textContent=e.message);}
 function logout(){showSync('Synchronising logout...');localStorage.removeItem('ob_user');alert('Logout successful.');location.reload();}
-function start(){document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');userPill.textContent=USER.Name+' · '+USER.Role;initDates();refresh();}
-function refresh(){api('bootstrap',{userId:USER.UserID}).then(data=>{STATE=data;fillLists();render();}).catch(alertErr);}
+function start(){document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');userPill.textContent=USER.Name+' · '+USER.Role;initDates();applyRoleVisibility();refresh();}
+function refresh(){api('bootstrap',{userId:USER.UserID}).then(data=>{STATE=data;fillLists();applyRoleVisibility();render();}).catch(alertErr);}
 function alertErr(e){alert(e.message||e);}
-function showTab(id){showSync('Synchronising navigation...');document.querySelectorAll('.tab').forEach(b=>{const on=b.dataset.tab===id;b.classList.toggle('on',on);b.classList.toggle('active',on);});document.querySelectorAll('.section').forEach(s=>s.classList.toggle('on',s.id===id));setTimeout(hideSync,250);}
+function showTab(id){if((id==='review1'||id==='review2')&&!isReviewAllowed(id)){id='task';}showSync('Synchronising navigation...');document.querySelectorAll('.tab').forEach(b=>{const on=b.dataset.tab===id;b.classList.toggle('on',on);b.classList.toggle('active',on);});document.querySelectorAll('.section').forEach(s=>s.classList.toggle('on',s.id===id));setTimeout(hideSync,250);}
 function modeChange(){const rec=document.querySelector('[name=mode]:checked').value==='recurring';document.querySelectorAll('.recOnly').forEach(e=>e.classList.toggle('hide',!rec));document.querySelectorAll('.singleOnly').forEach(e=>e.classList.toggle('hide',rec));}
 function activeUsers(){return (STATE.users||[]).filter(u=>String(u.IsActive).toUpperCase()!=='FALSE');}
 function selectedAssignee(){return activeUsers().find(u=>String(u.UserID)===String(ntAssignee.value))||{};}
@@ -187,20 +187,42 @@ function openNewTaskWhatsApp(){const u=selectedAssignee();const phone=cleanPhone
 function openTicketWhatsApp(){const t=DETAIL.ticket;const phone=cleanPhone(t.AssignedToWhatsApp||t.AssignedToPhone);if(!phone)return alert('No WhatsApp number found for this assignee.');const msg=t.WhatsAppMessage||ticketWhatsAppText(t);window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');}
 function copyTicketWhatsApp(){copyText(DETAIL.ticket.WhatsAppMessage||ticketWhatsAppText(DETAIL.ticket));}
 function ticketWhatsAppText(t){return `ONPOINT-BASE TASK ${t.TicketID}\n\nAssigned to: ${t.AssignedToName}\nDepartment: ${t.Department||''}\nCost Center: ${t.CostCenter||''}\nTitle: ${t.Title}\nPriority: ${t.Priority}\nIssue Date: ${fmt(t.IssueDate)}\nDue: ${fmt(t.DueDate)}\nStatus: ${t.Status}\nTime lapse: ${t.TimeRemainingText||''}\n\nDescription:\n${t.Description||''}`;}
+function userRoleKey(){return String(USER?.Role||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+function isExecutiveUser(){const r=userRoleKey();return r==='admin'||r==='adminmanager'||r==='executive1'||r==='exec1'||r==='executive2'||r==='exec2';}
+function isReviewAllowed(kind){
+  const r=userRoleKey();
+  if(r==='admin'||r==='adminmanager') return true;
+  if(kind==='review1') return r==='executive1'||r==='exec1';
+  if(kind==='review2') return r==='executive2'||r==='exec2';
+  return true;
+}
+function applyRoleVisibility(){
+  const showReview=isExecutiveUser();
+  document.querySelectorAll('.reviewOnly').forEach(el=>el.classList.toggle('hide',!showReview));
+  if(!showReview && (document.getElementById('review1')?.classList.contains('on') || document.getElementById('review2')?.classList.contains('on'))){showTab('task');}
+}
+function myTickets(){
+  const tickets=STATE.tickets||[];
+  if(isExecutiveUser()){
+    return tickets.filter(t=>String(t.CreatedByUserID)===String(USER.UserID) && String(t.AssignedToUserID)!==String(USER.UserID) && t.Status!=='Closed');
+  }
+  return tickets.filter(t=>String(t.AssignedToUserID)===String(USER.UserID) && t.Status!=='Closed');
+}
 function isLate(t){return String(t.TimeRemainingText||'').toLowerCase().includes('late') || String(t.ClosedTiming||'').toLowerCase().includes('late');}
 function isOpenOnTime(t){return t.Status!=='Closed' && !isLate(t) && (t.CurrentBasket==='Assignee'||t.Status==='Open');}
 function filterTickets(kind){
   const tickets=STATE.tickets||[];
-  if(kind==='critical') return tickets.filter(t=>String(t.Priority)==='Critical' && t.Status!=='Closed');
-  if(kind==='openOnTime') return tickets.filter(isOpenOnTime);
-  if(kind==='openLate') return tickets.filter(t=>t.Status!=='Closed' && isLate(t));
-  if(kind==='review1') return tickets.filter(t=>t.CurrentBasket==='Executive1');
-  if(kind==='review2') return tickets.filter(t=>t.CurrentBasket==='Executive2');
+  if(kind==='critical') return tickets.filter(t=>String(t.Priority)==='Critical' && t.Status!=='Closed' && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
+  if(kind==='openOnTime') return tickets.filter(t=>isOpenOnTime(t) && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
+  if(kind==='openLate') return tickets.filter(t=>t.Status!=='Closed' && isLate(t) && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
+  if(kind==='review1') return isReviewAllowed('review1') ? tickets.filter(t=>t.CurrentBasket==='Executive1') : [];
+  if(kind==='review2') return isReviewAllowed('review2') ? tickets.filter(t=>t.CurrentBasket==='Executive2') : [];
   if(kind==='closed') return tickets.filter(t=>t.Status==='Closed' || t.CurrentBasket==='Closed');
-  if(kind==='assigned') return tickets.filter(t=>t.CurrentBasket==='Assignee' && t.Status!=='Closed');
-  return tickets.filter(t=>t.Status!=='Closed' && t.CurrentBasket==='Assignee');
+  if(kind==='assigned') return tickets.filter(t=>t.CurrentBasket==='Assignee' && t.Status!=='Closed' && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
+  return myTickets();
 }
 function openTicketWindow(kind){
+  if((kind==='review1'||kind==='review2')&&!isReviewAllowed(kind)){kind='all';}
   CURRENT_FILTER=kind;
   if(kind==='review1') showTab('review1');
   else if(kind==='review2') showTab('review2');
@@ -213,11 +235,11 @@ function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=ST
   if(document.getElementById('stCritical'))stCritical.textContent=sum.critical; if(document.getElementById('stOpenOnTime'))stOpenOnTime.textContent=sum.openOnTime; stE1.textContent=sum.e1;stE2.textContent=sum.e2;stClosed.textContent=sum.closed;stLate.textContent=sum.late; renderDashboard(tickets,sum); buildPerfOptions(); renderPerformance();
   const filtered=filterTickets(CURRENT_FILTER).filter(t=>(t.Title+t.TicketID+t.AssignedToName+t.Department+t.CostCenter).toLowerCase().includes(s));
   taskRows.innerHTML=(`<tr><td colspan="8" class="filterTitle">Showing: ${esc(filterLabel(CURRENT_FILTER))}</td></tr>`)+ (filtered.map(rowTask).join('')||empty(8));
-  review1Rows.innerHTML=tickets.filter(t=>t.CurrentBasket==='Executive1').map(rowReview1).join('')||empty(6);
-  review2Rows.innerHTML=tickets.filter(t=>t.CurrentBasket==='Executive2').map(rowReview2).join('')||empty(6);
+  review1Rows.innerHTML=isReviewAllowed('review1')?(tickets.filter(t=>t.CurrentBasket==='Executive1').map(rowReview1).join('')||empty(6)):empty(6);
+  review2Rows.innerHTML=isReviewAllowed('review2')?(tickets.filter(t=>t.CurrentBasket==='Executive2').map(rowReview2).join('')||empty(6)):empty(6);
   closedRows.innerHTML=tickets.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed').map(rowClosed).join('')||empty(8);
 }
-function filterLabel(k){return ({critical:'Critical Tickets',openOnTime:'Open & Ontime Tickets',openLate:'Open and Late Tickets',review1:'Executive1 Review Basket',review2:'Executive2 Review Basket',closed:'Closed Tickets',assigned:'Assigned Tickets',all:'My Tickets'})[k]||k;}
+function filterLabel(k){return ({critical:'Critical Tickets',openOnTime:'Open & Ontime Tickets',openLate:'Open and Late Tickets',review1:'Executive1 Review Basket',review2:'Executive2 Review Basket',closed:'Closed Tickets',assigned:'Assigned Tickets',all:isExecutiveUser()?'Tickets I Assigned':'My Assigned Tickets'})[k]||k;}
 function renderDashboard(tickets,sum){
   const byDept={}; const byCC={}; let totalScore=0, scoreCount=0;
   tickets.forEach(t=>{byDept[t.Department||'Unassigned']=(byDept[t.Department||'Unassigned']||0)+1;byCC[t.CostCenter||'Unassigned']=(byCC[t.CostCenter||'Unassigned']||0)+1;if(t.FinalScore!==''&&t.FinalScore!=null){totalScore+=Number(t.FinalScore);scoreCount++;}});
