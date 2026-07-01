@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUOOlIIB4K6iHGLHnoa4DFLDr6oH3jxbBB6fv_Uy5zK6Iwq_nz9NRvq1QLH_TpkDidKw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysNMeFliiuSDg9y-tz2D9wL0QJELzwuXs8KITayJgv56xa5Wy612m9U3LEIor8pAtXUQ/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -327,8 +327,8 @@ function submitTicket(){
   const f=document.getElementById('fileUp')?.files?.[0];
   api('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''})
     .then(async ()=>{
-      if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, '');
-      alert('Ticket submitted to Executive1 successfully. Clock stopped and system score captured.');
+      if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'');
+      alert('Ticket submitted to Executive1 successfully. Clock stopped, system score captured, and attachment link posted where applicable.');
       refresh();
       openTicket(DETAIL.ticket.TicketID);
     })
@@ -340,7 +340,7 @@ function uploadFile(){
   const f=fileUp.files[0];
   if(!f) return alert('Choose a file first.');
   uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'')
-    .then(()=>openTicket(DETAIL.ticket.TicketID))
+    .then(()=>{alert('Attachment uploaded successfully. The Drive link has been posted to Tickets.UploadAttachment and Updates.');refresh();openTicket(DETAIL.ticket.TicketID);})
     .catch(alertErr);
 }
 
