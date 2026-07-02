@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwKGZfLe0OMfyLoBs3uYmbyW8YQijvcbH3ycQAwbQ7k1XIr9sJu12qTpHocqkQfQWRoQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYpZkrhU6XznRlN6-Nsjo0zdBIKIbROjxmvzuVk9W_dluS2L0u_rNz7Wb4zM5TtN9u8Q/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -268,7 +268,7 @@ function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=ST
   closedRows.innerHTML=tickets.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed').map(rowClosed).join('')||empty(8);
 }
 function filterLabel(k){return ({critical:'Critical Tickets',openOnTime:'Open & Ontime Tickets',openLate:'Open and Late Tickets',review1:'Executive1 Review Basket',review2:'Executive2 Review Basket',closed:'Closed Tickets',assigned:'Assigned Tickets',all:isExecutiveUser()?'Tickets I Assigned':'My Assigned Tickets'})[k]||k;}
-function computedFinalNumber(t){const stored=Number(t.FinalScore);const sys=Number(t.SystemScore),e1=Number(t.Executive1Score),e2=Number(t.Executive2Score);if(!isNaN(sys)&&!isNaN(e1)&&!isNaN(e2)&&t.SystemScore!==''&&t.Executive1Score!==''&&t.Executive2Score!=='')return Math.round((sys*(e1/100)*(e2/100))*100)/100;return isNaN(stored)?null:stored;}
+function computedFinalNumber(t){const stored=Number(t.FinalScore);return (t.FinalScore===''||t.FinalScore==null||isNaN(stored))?null:stored;}
 function avgComputedFinal(rows){const closed=rows.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed').map(computedFinalNumber).filter(n=>n!==null&&!isNaN(n));return closed.length?Math.round(closed.reduce((a,b)=>a+b,0)/closed.length):0;}
 function renderDashboard(tickets,sum){
   const byDept={}; const byCC={}; let totalScore=0, scoreCount=0;
